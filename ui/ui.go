@@ -11,10 +11,12 @@ import (
 )
 
 var (
-	// titleStyle        = lipgloss.NewStyle().MarginLeft(2)
+	titleStyle = lipgloss.NewStyle().
+			MarginLeft(2).
+			Background(lipgloss.Color("205")).MarginLeft(15)
 
 	docStyle = lipgloss.NewStyle().
-			Margin(1, 2).
+			Margin(1, 1).
 			Border(lipgloss.NormalBorder())
 
 	itemStyle = lipgloss.NewStyle().
@@ -24,9 +26,12 @@ var (
 				PaddingLeft(2).
 				Foreground(lipgloss.Color("170"))
 
-	// paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	// helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
-	// quitTextStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
+	markedListStyle = lipgloss.NewStyle().
+			Border(lipgloss.NormalBorder())
+
+	downloadableListStyle = lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder(), true, false, true, true).
+				Margin(0, 0, 0, -10)
 )
 
 const (
@@ -49,7 +54,12 @@ type itemDelegate struct{}
 func (d itemDelegate) Height() int                             { return 1 }
 func (d itemDelegate) Spacing() int                            { return 0 }
 func (d itemDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
-func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+func (d itemDelegate) Render(
+	w io.Writer,
+	m list.Model,
+	index int,
+	listItem list.Item,
+) {
 	i, ok := listItem.(item)
 	if !ok {
 		return
@@ -89,10 +99,32 @@ func NewModel() (m *Model) {
 	}
 
 	m = &Model{
-		Marked:       list.New(mr, itemDelegate{}, 0, 0),
-		Downloadable: list.New(d, itemDelegate{}, 0, 0),
-		state:        stateDownloadable,
+		Marked: list.New(
+			mr,
+			itemDelegate{},
+			0,
+			0,
+		),
+
+		Downloadable: list.New(
+			d,
+			itemDelegate{},
+			0,
+			0,
+		),
+
+		state: stateDownloadable,
 	}
+
+	m.Downloadable.Title = "Downloadable"
+	m.Downloadable.Styles.Title = titleStyle
+	m.Downloadable.SetShowHelp(false)
+	m.Downloadable.SetShowStatusBar(false)
+
+	m.Marked.Title = "Marked"
+	m.Marked.Styles.Title = titleStyle
+	m.Marked.SetShowHelp(false)
+	m.Marked.SetShowStatusBar(false)
 
 	return
 }
@@ -118,6 +150,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+
+	case tea.WindowSizeMsg:
+		_, v := docStyle.GetFrameSize()
+		m.width = msg.Width
+		m.height = msg.Height
+		setDownloadableSize(&m, m.width, msg.Height-v)
+		setMarkedSize(&m, m.width, msg.Height-v)
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
@@ -134,22 +174,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case stateDownloadable:
 			switch msg.String() {
 			case "enter":
-				m.Marked.InsertItem(len(m.Marked.Items()), m.Downloadable.SelectedItem())
+				m.Marked.InsertItem(
+					len(m.Marked.Items()),
+					m.Downloadable.SelectedItem(),
+				)
 			}
 
 		case stateMarked:
 			switch msg.String() {
 			case "d":
-				m.Marked.RemoveItem(m.Downloadable.Index())
+				m.Marked.RemoveItem(m.Marked.Index())
 			}
 		}
-
-	case tea.WindowSizeMsg:
-		h, v := docStyle.GetFrameSize()
-		m.width = msg.Width
-		m.height = msg.Height
-		m.Downloadable.SetSize(msg.Width-h, msg.Height-v)
-		m.Marked.SetSize(msg.Width-h, msg.Height-v)
 	}
 
 	switch m.state {
@@ -164,10 +200,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func setDownloadableSize(m *Model, width, height int) {
+	w := int(float64(width) * 0.8)
+	m.Downloadable.SetSize(w, height)
+}
+
+func setMarkedSize(m *Model, width, height int) {
+	w := int(float64(width) * 0.2)
+	m.Marked.SetSize(w, height)
+}
+
 func (m Model) View() string {
-	downloadable := m.Downloadable
-	marked := m.Marked
-	s := lipgloss.JoinHorizontal(lipgloss.Center, downloadable.View(), marked.View())
+
+	downloadableView := downloadableListStyle.Render(m.Downloadable.View())
+	markedView := markedListStyle.Render(m.Marked.View())
+
+	s := lipgloss.JoinHorizontal(
+		lipgloss.Center,
+		downloadableView,
+		markedView,
+	)
+
 	s = lipgloss.Place(
 		m.width,
 		m.height,
