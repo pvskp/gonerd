@@ -19,8 +19,14 @@ func printSlice(s []string) {
 	fmt.Printf("len=%d cap=%d %v\n", len(s), cap(s), s)
 }
 
-// DownloadFont downloads a font from the Nerd Fonts GitHub repo
-func DownloadFont(fontRelativeName string) {
+func DownloadFonts(fonts []string) {
+	for _, font := range fonts {
+		downloadFont(font)
+	}
+}
+
+// downloadFont downloads a font from the Nerd Fonts GitHub repo
+func downloadFont(fontRelativeName string) {
 	if !strings.HasSuffix(fontRelativeName, ".otf") && !strings.HasSuffix(fontRelativeName, ".ttf") {
 		log.Fatalf("Invalid font file extension: %s", fontRelativeName)
 	}

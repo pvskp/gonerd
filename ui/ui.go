@@ -8,33 +8,39 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	gonerd "github.com/pvskp/gonerd/cmd"
 )
 
 var (
 	titleStyle = lipgloss.NewStyle().
-			MarginLeft(2).
-			Background(lipgloss.Color("205")).MarginLeft(15)
+			Background(lipgloss.Color("205")).
+			Align(lipgloss.Center)
+		// MarginLeft(15)
 
 	docStyle = lipgloss.NewStyle().
 			Margin(1, 1).
 			Border(lipgloss.NormalBorder())
 
 	itemStyle = lipgloss.NewStyle().
-			PaddingLeft(4)
+			PaddingLeft(2)
 
 	selectedItemStyle = lipgloss.NewStyle().
-				PaddingLeft(2).
-				Foreground(lipgloss.Color("170"))
+				PaddingLeft(1).
+				Foreground(lipgloss.Color("175"))
 
 	markedListStyle = lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder())
+			Border(lipgloss.NormalBorder()).
+			Align(lipgloss.Left)
 
 	downloadableListStyle = lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder(), true, false, true, true).
-				Margin(0, 0, 0, -10)
+				Border(lipgloss.NormalBorder(), true, true, true, true).
+				Align(lipgloss.Left)
 )
 
 const (
+	DownloadablePercentageSize = 0.7
+	MarkedPercentageSize       = 0.3
+
 	stateDownloadable = iota
 	stateMarked
 	totalStates
@@ -65,7 +71,7 @@ func (d itemDelegate) Render(
 		return
 	}
 
-	str := fmt.Sprintf("%d. %s", index+1, i)
+	str := string(i)
 
 	fn := itemStyle.Render
 	if index == m.Index() {
@@ -152,11 +158,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.WindowSizeMsg:
-		_, v := docStyle.GetFrameSize()
+		h, v := docStyle.GetFrameSize()
 		m.width = msg.Width
 		m.height = msg.Height
-		setDownloadableSize(&m, m.width, msg.Height-v)
-		setMarkedSize(&m, m.width, msg.Height-v)
+
+		setDownloadableSize(&m, m.width-h, msg.Height-v)
+		setMarkedSize(&m, m.width-h, msg.Height-v)
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -184,6 +191,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "d":
 				m.Marked.RemoveItem(m.Marked.Index())
+			case "i":
+				gonerd.DownloadFonts([]string{})
 			}
 		}
 	}
@@ -201,21 +210,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func setDownloadableSize(m *Model, width, height int) {
-	w := int(float64(width) * 0.8)
+	w := int(float64(width) * DownloadablePercentageSize)
+	downloadableListStyle.Width(w)
+	downloadableListStyle.Height(height)
 	m.Downloadable.SetSize(w, height)
 }
 
 func setMarkedSize(m *Model, width, height int) {
-	w := int(float64(width) * 0.2)
+	w := int(float64(width) * MarkedPercentageSize)
+	markedListStyle.Width(w)
+	markedListStyle.Height(height)
 	m.Marked.SetSize(w, height)
 }
 
-func (m Model) View() string {
-
+func (m Model) View() (s string) {
 	downloadableView := downloadableListStyle.Render(m.Downloadable.View())
 	markedView := markedListStyle.Render(m.Marked.View())
 
-	s := lipgloss.JoinHorizontal(
+	s = lipgloss.JoinHorizontal(
 		lipgloss.Center,
 		downloadableView,
 		markedView,
@@ -228,8 +240,7 @@ func (m Model) View() string {
 		lipgloss.Center,
 		s,
 	)
-	return s
-
+	return
 }
 
 func (m Model) Init() tea.Cmd { return nil }
