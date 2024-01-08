@@ -19,16 +19,11 @@ func printSlice(s []string) {
 	fmt.Printf("len=%d cap=%d %v\n", len(s), cap(s), s)
 }
 
-func DownloadFonts(fonts []string) {
-	for _, font := range fonts {
-		downloadFont(font)
-	}
-}
-
-// downloadFont downloads a font from the Nerd Fonts GitHub repo
-func downloadFont(fontRelativeName string) {
+// DownloadFont downloads a font from the Nerd Fonts GitHub repo
+func DownloadFont(fontRelativeName string) (err error) {
 	if !strings.HasSuffix(fontRelativeName, ".otf") && !strings.HasSuffix(fontRelativeName, ".ttf") {
-		log.Fatalf("Invalid font file extension: %s", fontRelativeName)
+		log.Printf("Invalid font file extension: %s", fontRelativeName)
+		return fmt.Errorf("Invalid font file extension: %s", fontRelativeName)
 	}
 
 	fontPath := fmt.Sprintf("%s/%s", FONT_DOWNLOAD_ENDPOINT, fontRelativeName)
@@ -44,20 +39,21 @@ func downloadFont(fontRelativeName string) {
 
 	defer resp.Body.Close()
 
-	fmt.Println("Creating file...")
-	fmt.Println(fontRelativeName[strings.LastIndex(fontRelativeName, "/")+1:])
+	log.Println("Creating file...")
+	log.Println(fontRelativeName[strings.LastIndex(fontRelativeName, "/")+1:])
 	out, err := os.Create(fontRelativeName[strings.LastIndex(fontRelativeName, "/")+1:])
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	defer out.Close()
 
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	log.Println("File downloaded successfully")
+	return
 }
 
 func FetchDirInfo(dirName string) []string {
@@ -65,7 +61,7 @@ func FetchDirInfo(dirName string) []string {
 
 	resp, err := http.Get(fontInfoPath)
 	if err != nil {
-		log.Fatalf("Error fetching URL: %v", err)
+		log.Printf("Error fetching URL: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -87,7 +83,7 @@ func FetchDirInfo(dirName string) []string {
 func FetchFromGitHub(r io.Reader) *GitHubRepoResponse {
 	doc, err := goquery.NewDocumentFromReader(r)
 	if err != nil {
-		log.Fatalf("Error loading HTTP response body: %v", err)
+		log.Printf("Error loading HTTP response body: %v", err)
 	}
 
 	var jsonData string
@@ -98,12 +94,12 @@ func FetchFromGitHub(r io.Reader) *GitHubRepoResponse {
 	})
 
 	if jsonData == "" {
-		log.Fatalf("No JSON data found")
+		log.Printf("No JSON data found")
 	}
 
 	ghResponse := GitHubRepoResponse{}
 	if err := json.Unmarshal([]byte(jsonData), &ghResponse); err != nil {
-		log.Fatalf("Error unmarshalling JSON: %v", err)
+		log.Printf("Error unmarshalling JSON: %v", err)
 	}
 	return &ghResponse
 }
@@ -111,7 +107,7 @@ func FetchFromGitHub(r io.Reader) *GitHubRepoResponse {
 func GetFontFamilies() []string {
 	resp, err := http.Get("https://github.com/ryanoasis/nerd-fonts/tree/master/patched-fonts")
 	if err != nil {
-		log.Fatalf("Error fetching font names: %v", err)
+		log.Printf("Error fetching font names: %v", err)
 	}
 	defer resp.Body.Close()
 

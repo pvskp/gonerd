@@ -1,15 +1,14 @@
 package ui
 
 import (
-	"fmt"
-	"io"
 	"log"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	gonerd "github.com/pvskp/gonerd/cmd"
+	"github.com/pvskp/gonerd/adapters"
+	"github.com/pvskp/gonerd/events"
+	"github.com/pvskp/gonerd/structs"
 )
 
 var (
@@ -21,13 +20,6 @@ var (
 	docStyle = lipgloss.NewStyle().
 			Margin(1, 1).
 			Border(lipgloss.NormalBorder())
-
-	itemStyle = lipgloss.NewStyle().
-			PaddingLeft(2)
-
-	selectedItemStyle = lipgloss.NewStyle().
-				PaddingLeft(1).
-				Foreground(lipgloss.Color("175"))
 
 	markedListStyle = lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder()).
@@ -47,43 +39,6 @@ const (
 	totalStates
 )
 
-type Item string
-
-func (i Item) FilterValue() string {
-	return string(i)
-}
-
-func (i Item) Title() string       { return string(i) }
-func (i Item) Description() string { return "" }
-
-type itemDelegate struct{}
-
-func (d itemDelegate) Height() int                             { return 1 }
-func (d itemDelegate) Spacing() int                            { return 0 }
-func (d itemDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
-func (d itemDelegate) Render(
-	w io.Writer,
-	m list.Model,
-	index int,
-	listItem list.Item,
-) {
-	i, ok := listItem.(Item)
-	if !ok {
-		return
-	}
-
-	str := string(i)
-
-	fn := itemStyle.Render
-	if index == m.Index() {
-		fn = func(s ...string) string {
-			return selectedItemStyle.Render("> " + strings.Join(s, " "))
-		}
-	}
-
-	fmt.Fprint(w, fn(str))
-}
-
 type Model struct {
 	Marked       list.Model
 	Downloadable list.Model
@@ -94,28 +49,28 @@ type Model struct {
 
 func NewModel() (m *Model) {
 	d := []list.Item{
-		Item("Fira Code"),
-		Item("Anonymous Pro"),
-		Item("Inconsolata"),
+		structs.NewItem("Fira Code"),
+		structs.NewItem("Anonymous Pro"),
+		structs.NewItem("Inconsolata"),
 	}
 
 	mr := []list.Item{
-		Item("Hack"),
-		Item("Hack"),
-		Item("Hack"),
+		structs.NewItem("Hack"),
+		structs.NewItem("Hack"),
+		structs.NewItem("Hack"),
 	}
 
 	m = &Model{
 		Marked: list.New(
 			mr,
-			itemDelegate{},
+			structs.ItemDelegate{},
 			0,
 			0,
 		),
 
 		Downloadable: list.New(
 			d,
-			itemDelegate{},
+			structs.ItemDelegate{},
 			0,
 			0,
 		),
@@ -135,8 +90,8 @@ func NewModel() (m *Model) {
 	log.Printf("[]list.Items = %v\n", m.Downloadable.Items())
 
 	for _, v := range m.Downloadable.Items() {
-		if item, ok := v.(Item); ok {
-			s := string(item)
+		if item, ok := v.(structs.Item); ok {
+			s := item.Content
 			log.Printf("curr item = %v\n", s)
 			log.Printf("curr item type = %T\n", s)
 		}
@@ -165,6 +120,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+
+	case events.FontDownloadedMsg:
+		log.Println("FontDownloadedMsg received")
+
+		// if msg.Success {
+		// 	m.Marked.RemoveItem(m.Marked.Index())
+		// }
+
+		// if msg.Index == len(m.Marked.Items()) {
+		// }
+
+		// if len(m.Marked.Items()) == 0 {
+		// 	m.changeState()
+		// }
 
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
@@ -201,7 +170,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "d":
 				m.Marked.RemoveItem(m.Marked.Index())
 			case "i":
-				gonerd.DownloadFonts([]string{})
+				items := m.Marked.Items()
+				if len(m.Marked.Items()) > 0 {
+					adapters.DownloadSingleFont(items[m.Marked.Index()], m.Marked.Index())
+				}
 			}
 		}
 	}
