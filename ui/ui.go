@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"io"
+	"log"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -46,14 +47,14 @@ const (
 	totalStates
 )
 
-type item string
+type Item string
 
-func (i item) FilterValue() string {
+func (i Item) FilterValue() string {
 	return string(i)
 }
 
-func (i item) Title() string       { return string(i) }
-func (i item) Description() string { return "" }
+func (i Item) Title() string       { return string(i) }
+func (i Item) Description() string { return "" }
 
 type itemDelegate struct{}
 
@@ -66,7 +67,7 @@ func (d itemDelegate) Render(
 	index int,
 	listItem list.Item,
 ) {
-	i, ok := listItem.(item)
+	i, ok := listItem.(Item)
 	if !ok {
 		return
 	}
@@ -93,15 +94,15 @@ type Model struct {
 
 func NewModel() (m *Model) {
 	d := []list.Item{
-		item("Fira Code"),
-		item("Anonymous Pro"),
-		item("Inconsolata"),
+		Item("Fira Code"),
+		Item("Anonymous Pro"),
+		Item("Inconsolata"),
 	}
 
 	mr := []list.Item{
-		item("Hack"),
-		item("Hack"),
-		item("Hack"),
+		Item("Hack"),
+		Item("Hack"),
+		Item("Hack"),
 	}
 
 	m = &Model{
@@ -118,7 +119,6 @@ func NewModel() (m *Model) {
 			0,
 			0,
 		),
-
 		state: stateDownloadable,
 	}
 
@@ -132,6 +132,15 @@ func NewModel() (m *Model) {
 	m.Marked.SetShowHelp(false)
 	m.Marked.SetShowStatusBar(false)
 
+	log.Printf("[]list.Items = %v\n", m.Downloadable.Items())
+
+	for _, v := range m.Downloadable.Items() {
+		if item, ok := v.(Item); ok {
+			s := string(item)
+			log.Printf("curr item = %v\n", s)
+			log.Printf("curr item type = %T\n", s)
+		}
+	}
 	return
 }
 
