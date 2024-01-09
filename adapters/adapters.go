@@ -10,7 +10,7 @@ import (
 )
 
 func DownloadSingleFont(font list.Item, index int) events.FontDownloadedMsg {
-	if item, ok := font.(structs.Item); ok {
+	if item, ok := font.(structs.FontlistItem); ok {
 		if err := cmd.DownloadFont(item.Content); err != nil {
 			log.Println("Error while downloading font ", item.Content, " : ", err)
 			return events.FontDownloadedMsg{
@@ -27,7 +27,7 @@ func DownloadSingleFont(font list.Item, index int) events.FontDownloadedMsg {
 
 func DownloadFont(fonts []list.Item) events.FontDownloadedMsg {
 	for i, v := range fonts {
-		if item, ok := v.(structs.Item); ok {
+		if item, ok := v.(structs.FontlistItem); ok {
 			if err := cmd.DownloadFont(item.Content); err != nil {
 				log.Println("Error while downloading font ", item, " : ", err)
 				return events.FontDownloadedMsg{

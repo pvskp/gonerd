@@ -13,21 +13,21 @@ var (
 				Foreground(lipgloss.Color("175"))
 )
 
-type Item struct {
+type FontlistItem struct {
 	Content           string
 	itemStyle         lipgloss.Style
 	selectedItemStyle lipgloss.Style
 }
 
-func (i Item) FilterValue() string {
+func (i FontlistItem) FilterValue() string {
 	return i.Content
 }
 
-func (i Item) Title() string       { return i.Content }
-func (i Item) Description() string { return "" }
+func (i FontlistItem) Title() string       { return i.Content }
+func (i FontlistItem) Description() string { return "" }
 
-func NewItem(content string) Item {
-	return Item{
+func NewItem(content string) FontlistItem {
+	return FontlistItem{
 		Content:           content,
 		itemStyle:         itemStyle,
 		selectedItemStyle: selectedItemStyle,

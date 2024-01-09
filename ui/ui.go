@@ -12,27 +12,21 @@ import (
 )
 
 var (
-	titleStyle = lipgloss.NewStyle().
-			Background(lipgloss.Color("205")).
-			Align(lipgloss.Center)
-		// MarginLeft(15)
-
 	docStyle = lipgloss.NewStyle().
-			Margin(1, 1).
-			Border(lipgloss.NormalBorder())
-
-	markedListStyle = lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder()).
-			Align(lipgloss.Left)
-
-	downloadableListStyle = lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder(), true, true, true, true).
-				Align(lipgloss.Left)
+		Margin(1, 1).
+		Border(lipgloss.NormalBorder())
 )
 
+// var notification Notification = NewNotification()
+
 const (
-	DownloadablePercentageSize = 0.7
-	MarkedPercentageSize       = 0.3
+	DownloadableWidthPercentageSize = 0.6
+	MarkedWidthPercentageSize       = 0.4
+	NotificationWidthPercentageSize = 0.4
+
+	DownloadableHeightPercentageSize = 1
+	MarkedHeightPercentageSize       = 0.8
+	NotificationHeightPercentageSize = 0.2
 
 	stateDownloadable = iota
 	stateMarked
@@ -40,8 +34,8 @@ const (
 )
 
 type Model struct {
-	Marked       list.Model
-	Downloadable list.Model
+	Marked       structs.FontList
+	Downloadable structs.FontList
 	state        int
 	width        int
 	height       int
@@ -61,36 +55,15 @@ func NewModel() (m *Model) {
 	}
 
 	m = &Model{
-		Marked: list.New(
-			mr,
-			structs.ItemDelegate{},
-			0,
-			0,
-		),
-
-		Downloadable: list.New(
-			d,
-			structs.ItemDelegate{},
-			0,
-			0,
-		),
-		state: stateDownloadable,
+		Marked:       structs.NewMarkedModel(mr),
+		Downloadable: structs.NewDownloadableModel(d),
+		state:        stateDownloadable,
 	}
-
-	m.Downloadable.Title = "Downloadable"
-	m.Downloadable.Styles.Title = titleStyle
-	m.Downloadable.SetShowHelp(false)
-	m.Downloadable.SetShowStatusBar(false)
-
-	m.Marked.Title = "Marked"
-	m.Marked.Styles.Title = titleStyle
-	m.Marked.SetShowHelp(false)
-	m.Marked.SetShowStatusBar(false)
 
 	log.Printf("[]list.Items = %v\n", m.Downloadable.Items())
 
 	for _, v := range m.Downloadable.Items() {
-		if item, ok := v.(structs.Item); ok {
+		if item, ok := v.(structs.FontlistItem); ok {
 			s := item.Content
 			log.Printf("curr item = %v\n", s)
 			log.Printf("curr item type = %T\n", s)
@@ -124,24 +97,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case events.FontDownloadedMsg:
 		log.Println("FontDownloadedMsg received")
 
-		// if msg.Success {
-		// 	m.Marked.RemoveItem(m.Marked.Index())
-		// }
-
-		// if msg.Index == len(m.Marked.Items()) {
-		// }
-
-		// if len(m.Marked.Items()) == 0 {
-		// 	m.changeState()
-		// }
-
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
 		m.width = msg.Width
 		m.height = msg.Height
 
-		setDownloadableSize(&m, m.width-h, msg.Height-v)
-		setMarkedSize(&m, m.width-h, msg.Height-v)
+		m.Downloadable.Resize(
+			int(float64(msg.Width-h)*DownloadableWidthPercentageSize),
+			msg.Height-v,
+		)
+
+		m.Marked.Resize(
+			int(float64(msg.Width-h)*MarkedWidthPercentageSize),
+			msg.Height-v,
+		)
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -190,23 +159,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func setDownloadableSize(m *Model, width, height int) {
-	w := int(float64(width) * DownloadablePercentageSize)
-	downloadableListStyle.Width(w)
-	downloadableListStyle.Height(height)
-	m.Downloadable.SetSize(w, height)
-}
-
-func setMarkedSize(m *Model, width, height int) {
-	w := int(float64(width) * MarkedPercentageSize)
-	markedListStyle.Width(w)
-	markedListStyle.Height(height)
-	m.Marked.SetSize(w, height)
-}
+// func setNotificationSize(n *Notification, width, height int) {
+// 	w := int(float64(width) * NotificationWidthPercentageSize)
+// 	h := int(float64(height) * NotificationHeightPercentageSize)
+// 	n.Resize(w, h)
+// }
 
 func (m Model) View() (s string) {
-	downloadableView := downloadableListStyle.Render(m.Downloadable.View())
-	markedView := markedListStyle.Render(m.Marked.View())
+	downloadableView := m.Downloadable.Render()
+	markedView := m.Marked.Render()
 
 	s = lipgloss.JoinHorizontal(
 		lipgloss.Center,

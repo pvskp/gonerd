@@ -20,7 +20,7 @@ func (d ItemDelegate) Render(
 	index int,
 	listItem list.Item,
 ) {
-	i, ok := listItem.(Item)
+	i, ok := listItem.(FontlistItem)
 	if !ok {
 		return
 	}
